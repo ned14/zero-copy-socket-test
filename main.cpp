@@ -22,7 +22,7 @@ using boost::system::error_code;
 
 static std::atomic<bool> first_packet(true);
 static std::atomic<size_t> gate;
-static size_t threads(2/*std::thread::hardware_concurrency()*/), buffers(4), packet_size(65507);
+static size_t threads(2/*std::thread::hardware_concurrency()*/), buffers(4), packet_size(65487);
 static udp::endpoint local(asio::ip::address_v4::any(), 7868), endpoint(asio::ip::address_v4::loopback(), 7868);
 static std::chrono::time_point<std::chrono::high_resolution_clock> begin;
 static asio::io_service service(threads);
@@ -167,7 +167,7 @@ int main(int argc, char *argv[])
 {
   if(argc==1)
     std::cout << "Usage: " << argv[0] << " ip:port [buffers] [datagram size]\n"
-              << "Using localhost:7868 4 65507 as default\n";
+              << "Using localhost:7868 4 65487 as default\n";
   else
   {
     if(argc>=2)
