@@ -54,14 +54,21 @@ struct worker
   size_t read_count, write_count, read_bytes;
   std::vector<unsigned char *> read_buffers, write_buffers;
   std::vector<unsigned char *>::iterator read_buffer, write_buffer;
+#ifdef WIN32
+  HANDLE lsocketh;
+#endif
   std::thread thread;
   worker() : worker(0) { }
-  worker(size_t myidx) : socket(service, asio::ip::udp::v4()), myremote(endpoint), read_count(0), write_count(0), read_bytes(0), thread(&worker::run, this, myidx) { }
+  worker(size_t myidx) : socket(service, asio::ip::udp::v4()), myremote(endpoint), read_count(0), write_count(0), read_bytes(0), thread(&worker::run, this, myidx)
+#ifdef WIN32
+    , lsocketh(nullptr)
+#endif
+  { }
   worker(const worker &) = delete;
   worker(worker &&) : worker(0) {}
   void doread()
   {
-    listening_socket.async_receive(asio::buffer(*read_buffer, packet_size), [&](error_code ec, size_t bytes)
+    auto handle_read=[&](error_code ec, size_t bytes)
     {
       if(!ec)
       {
@@ -78,7 +85,33 @@ struct worker
       if(++read_buffer==read_buffers.end())
         read_buffer=read_buffers.begin();
       doread();
-    });
+    };
+#if defined WIN32 && 0
+    // Schedule the read manually (using a duplicated handle) instead of asking ASIO. Gains us another 2%
+    if(!lsocketh)
+    {
+      //DuplicateHandle(GetCurrentProcess(), (HANDLE)(size_t) listening_socket.native_handle(), GetCurrentProcess(), &lsocketh, 0, false, DUPLICATE_SAME_ACCESS);
+      lsocketh=(HANDLE) (size_t) listening_socket.native_handle();
+    }
+    asio::windows::overlapped_ptr o(service, handle_read);
+    DWORD bytes=0, flags=0;
+    WSABUF buffer={ packet_size, (char *) *read_buffer };
+    int ret=WSARecv((SOCKET) lsocketh, &buffer, 1, &bytes, &flags, o.get(), nullptr);
+    DWORD lasterror=GetLastError();
+    if(!ret || (SOCKET_ERROR==ret && ERROR_IO_PENDING==lasterror))
+    {
+      // Hand off to ASIO
+      o.release();
+    }
+    else
+    {
+      // Invoke handler with error right now
+      error_code ec(lasterror, boost::asio::error::get_system_category());
+      o.complete(ec, bytes);
+    }
+#else
+    listening_socket.async_receive(asio::buffer(*read_buffer, packet_size), handle_read);
+#endif
   }
   void dowrite()
   {
@@ -191,8 +224,9 @@ int main(int argc, char *argv[])
   --gate;
   while(gate)
     std::this_thread::yield();
-#if 0
-  getchar();
+#if 1
+  //getchar();
+  std::this_thread::sleep_for(std::chrono::seconds(10));
 #else
   // Windows blocks so heavily SpeedStep interferes so keep a CPU more busy ...
   while(std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now()-begin).count()<10)
