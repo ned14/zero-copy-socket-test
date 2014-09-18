@@ -140,8 +140,8 @@ struct worker
     write_buffer=write_buffers.begin();
     //std::cout << ((void *) read_buffers.front()) << "," << ((void *) write_buffers.front()) << std::endl;
     //std::cout << ((void *) *read_buffer) << "," << ((void *) *write_buffer) << std::endl;
-    socket.set_option(asio::socket_base::receive_buffer_size(65507));
-    socket.set_option(asio::socket_base::send_buffer_size(65507));
+    socket.set_option(asio::socket_base::receive_buffer_size(65487));
+    socket.set_option(asio::socket_base::send_buffer_size(65487));
 #if 0
     asio::socket_base::reuse_address option(true);
     socket.set_option(option);
@@ -156,8 +156,16 @@ struct worker
     --gate;
     while(gate)
       std::this_thread::yield();
+#if 0
+    // Single writer many reader
+    if(!myidx)
+      dowrite();
+    else
+      doread();
+#else
     doread();
     dowrite();
+#endif
     service.run();
   }
   void join() { return thread.join(); }
@@ -192,8 +200,8 @@ int main(int argc, char *argv[])
     std::cerr << "Failed to open UDP socket\n";
     return 1;
   }
-  listening_socket.set_option(asio::socket_base::receive_buffer_size(65507));
-  listening_socket.set_option(asio::socket_base::send_buffer_size(65507));
+  listening_socket.set_option(asio::socket_base::receive_buffer_size(65487));
+  listening_socket.set_option(asio::socket_base::send_buffer_size(65487));
   // Try to bind to this or next port
   if(listening_socket.bind(local, ec))
   {
@@ -218,38 +226,40 @@ int main(int argc, char *argv[])
   gate=workers.capacity()+1;
   for(size_t n=0; n<workers.capacity(); n++)
     workers.emplace_back(n);
-  auto temp=begin=std::chrono::high_resolution_clock::now();
-  while(std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now()-temp).count()<3)
-    std::this_thread::yield();
   --gate;
   while(gate)
     std::this_thread::yield();
-#if 1
-  //getchar();
-  std::this_thread::sleep_for(std::chrono::seconds(10));
-#else
-  // Windows blocks so heavily SpeedStep interferes so keep a CPU more busy ...
-  while(std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now()-begin).count()<10)
-    std::this_thread::yield();
-#endif
+  std::thread printspeed([&]{
+    while(!gate)
+    {
+      std::this_thread::sleep_for(std::chrono::seconds(5));
+      auto end=std::chrono::high_resolution_clock::now();
+      std::cout << "\nWorkers did:\n";
+      size_t reads=0, writes=0, bytes=0;
+      for(auto &i: workers)
+      {
+        std::cout << "  " << i.read_count << " reads and " << i.write_count << " writes\n";
+        reads+=i.read_count;
+        writes+=i.write_count;
+        bytes+=i.read_bytes;
+      }
+      std::cout << "Making a total of " << reads << " reads and " << writes << " writes of " << bytes << " bytes\n";
+      double rate=bytes;
+      rate/=std::chrono::duration_cast<std::chrono::nanoseconds>(end-begin).count()/1000000000.0;
+      rate/=1024*1024;
+      std::cout << "And some " << rate << "Mb/sec.\n";
+      for(auto &i: workers)
+      {
+        i.read_count=i.write_count=i.read_bytes=0;
+      }
+      begin=std::chrono::high_resolution_clock::now();
+    }
+  });
+  getchar();
+  gate=1;
   service.stop();
+  printspeed.join();
   for(auto &i: workers)
     i.join();
-  auto end=std::chrono::high_resolution_clock::now();
-  
-  std::cout << "\nWorkers did:\n";
-  size_t reads=0, writes=0, bytes=0;
-  for(auto &i: workers)
-  {
-    std::cout << "  " << i.read_count << " reads and " << i.write_count << " writes\n";
-    reads+=i.read_count;
-    writes+=i.write_count;
-    bytes+=i.read_bytes;
-  }
-  std::cout << "Making a total of " << reads << " reads and " << writes << " writes of " << bytes << " bytes\n";
-  double rate=bytes;
-  rate/=std::chrono::duration_cast<std::chrono::nanoseconds>(end-begin).count()/1000000000.0;
-  rate/=1024*1024;
-  std::cout << "And some " << rate << "Mb/sec.\n";
   return 0;
 }
