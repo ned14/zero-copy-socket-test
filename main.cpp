@@ -95,7 +95,7 @@ struct worker
     }
     asio::windows::overlapped_ptr o(service, handle_read);
     DWORD bytes=0, flags=0;
-    WSABUF buffer={ packet_size, (char *) *read_buffer };
+    WSABUF buffer={ 65535, (char *) *read_buffer };
     int ret=WSARecv((SOCKET) lsocketh, &buffer, 1, &bytes, &flags, o.get(), nullptr);
     DWORD lasterror=GetLastError();
     if(!ret || (SOCKET_ERROR==ret && ERROR_IO_PENDING==lasterror))
@@ -110,7 +110,7 @@ struct worker
       o.complete(ec, bytes);
     }
 #else
-    listening_socket.async_receive(asio::buffer(*read_buffer, packet_size), handle_read);
+    listening_socket.async_receive(asio::buffer(*read_buffer, 65535), handle_read);
 #endif
   }
   void dowrite()
@@ -133,7 +133,7 @@ struct worker
   {
     for(size_t n=0; n<buffers; n++)
     {
-      read_buffers.push_back(allocate_dma_buffer(packet_size));
+      read_buffers.push_back(allocate_dma_buffer(65536));
       write_buffers.push_back(allocate_dma_buffer(packet_size));
     }
     read_buffer=read_buffers.begin();

@@ -15,7 +15,14 @@ Linux maxes out at 6881 Mb/sec with 2 thread and 1 buffer @ 65507.
 Windows maxes out at 3000 Mb/sec with 2 thread and 4 buffer @ 65507.
 
 
-### Real 1Gbps NIC: ###
+### Real 1Gbps NIC MTU 1500: ###
 Windows => Linux sees 60 Mb/sec with 2 thread and 4 buffer @ 65487.
 
 Linux => Windows sees 0.1 Mb/sec with 2 thread and 4 buffer @ 65487. **Something is very wrong here**.
+
+
+#### Next tried multiples of 1500 MTU ... ####
+
+Windows => Linux maxes out at 118 Mb/sec with 2 thread and 4 buffer @ 8952 (6 MTUs)
+
+Linux => Windows maxes out at 116 Mb/sec with 2 thread and 4 buffer @ 3000 (3 MTUs)
