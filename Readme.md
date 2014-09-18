@@ -32,7 +32,17 @@ Linux => Windows sees 118 Mb/sec with 2 thread and 4 buffer @ 8972 (1 MTU)
 Windows machine @ 11% CPU
 Linux machine @ 28% CPU (note this is routed through OpenVZ networking)
 
-Windows => Linux maxes out at 117 Mb/sec with 2 thread and 1 buffer @ 4000 (0.5 MTUs)
-Linux => Windows maxes out at 117 Mb/sec with 2 thread and 4 buffer @ 4000 (0.5 MTUs)
+Windows => Linux sees 117 Mb/sec with 2 thread and 1 buffer @ 4000 (0.5 MTUs)
+Linux => Windows sees at 117 Mb/sec with 2 thread and 4 buffer @ 4000 (0.5 MTUs)
 Windows machine @ 15% CPU
 Linux machine @ 28% CPU (note this is routed through OpenVZ networking)
+
+Windows => Linux sees 86 Mb/sec with 1 thread and 1 buffer @ 8972 (1 MTU)
+Linux => Windows sees 118 Mb/sec with 1 thread and 4 buffer @ 8972 (1 MTU)
+Windows machine @ 10% CPU
+Linux machine @ 13% CPU (note this is routed through OpenVZ networking)
+
+Windows => Linux sees 115 Mb/sec with 1 thread and 1 buffer @ 4000 (0.5 MTUs)
+Linux => Windows sees at 117 Mb/sec with 1 thread and 4 buffer @ 4000 (0.5 MTUs)
+Windows machine @ 12% CPU
+Linux machine @ 17% CPU (note this is routed through OpenVZ networking)
