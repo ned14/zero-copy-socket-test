@@ -15,14 +15,24 @@ Linux maxes out at 6881 Mb/sec with 2 thread and 1 buffer @ 65507.
 Windows maxes out at 3000 Mb/sec with 2 thread and 4 buffer @ 65507.
 
 
-### Real 1Gbps NIC MTU 1500: ###
-Windows => Linux sees 60 Mb/sec with 2 thread and 4 buffer @ 65487.
+### Real 1Gbps NIC MTU 9000: ###
+MTU of 8972 was confirmed using:
 
-Linux => Windows sees 0.1 Mb/sec with 2 thread and 4 buffer @ 65487. **Something is very wrong here**.
+Win8: ping -f -l 8972 addr
+Linux: ping -M do -s 8972 addr
 
+Windows => Linux sees 35 Mb/sec with 2 thread and 4 buffer @ 65487. This may be the notoriously awful Intel 82579V NIC on the Windows machine though.
 
-#### Next tried multiples of 1500 MTU ... ####
+Linux => Windows sees 107 Mb/sec with 2 thread and 4 buffer @ 65487.
 
-Windows => Linux maxes out at 118 Mb/sec with 2 thread and 4 buffer @ 8952 (6 MTUs)
+#### Next tried multiples of MTU ... ####
 
-Linux => Windows maxes out at 116 Mb/sec with 2 thread and 4 buffer @ 3000 (3 MTUs)
+Windows => Linux sees 101 Mb/sec with 2 thread and 1 buffer @ 8972 (1 MTU)
+Linux => Windows sees 118 Mb/sec with 2 thread and 4 buffer @ 8972 (1 MTU)
+Windows machine @ 11% CPU
+Linux machine @ 28% CPU (note this is routed through OpenVZ networking)
+
+Windows => Linux maxes out at 117 Mb/sec with 2 thread and 1 buffer @ 4000 (0.5 MTUs)
+Linux => Windows maxes out at 117 Mb/sec with 2 thread and 4 buffer @ 4000 (0.5 MTUs)
+Windows machine @ 15% CPU
+Linux machine @ 28% CPU (note this is routed through OpenVZ networking)
