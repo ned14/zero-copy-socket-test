@@ -1,3 +1,5 @@
+//#define ENABLE_WIN32_RIO
+
 #ifdef WIN32
 #  define WIN32_LEAN_AND_MEAN 1
 #  include <windows.h>
@@ -22,7 +24,7 @@ using boost::system::error_code;
 
 static std::atomic<bool> first_packet(true);
 static std::atomic<size_t> gate;
-static size_t threads(2/*std::thread::hardware_concurrency()*/), buffers(4), packet_size(65487);
+static size_t threads(1/*std::thread::hardware_concurrency()*/), buffers(4), packet_size(65487);
 static udp::endpoint local(asio::ip::address_v4::any(), 7868), endpoint(asio::ip::address_v4::loopback(), 7868);
 static std::chrono::time_point<std::chrono::high_resolution_clock> begin;
 static asio::io_service service(threads);
@@ -36,6 +38,9 @@ unsigned char *allocate_dma_buffer(size_t len) {
 void deallocate_dma_buffer(unsigned char *buf, size_t /*len*/) {
   VirtualFree(buf, 0, MEM_RELEASE);
 }
+#ifdef ENABLE_WIN32_RIO
+RIO_EXTENSION_FUNCTION_TABLE rio;
+#endif
 #else
 unsigned char *allocate_dma_buffer(size_t len) {
   void *ret = mmap(nullptr, len, PROT_READ|PROT_WRITE, MAP_ANONYMOUS|MAP_SHARED,
@@ -203,7 +208,7 @@ int main(int argc, char *argv[])
   listening_socket.set_option(asio::socket_base::receive_buffer_size(65487));
   listening_socket.set_option(asio::socket_base::send_buffer_size(65487));
   // Try to bind to this or next port
-  if(listening_socket.bind(local, ec))
+  if(1 || listening_socket.bind(local, ec))
   {
     std::cerr << "Failed to bind to " << local.port() << " due to " << ec << "\n";
     local.port(local.port()+1);
@@ -218,7 +223,28 @@ int main(int argc, char *argv[])
   std::cout << "Listening to " << local << " and sending to " << endpoint << " ...\n";
   //std::cout << "Launch the other side now and press Return when it's ready ...\n";
   //getchar();
-  
+#ifdef ENABLE_WIN32_RIO
+  {
+    GUID functionTableId = WSAID_MULTIPLE_RIO;
+    DWORD dwBytes = 0;
+    if(0 != WSAIoctl(
+      listening_socket.native_handle(),
+      SIO_GET_MULTIPLE_EXTENSION_FUNCTION_POINTER,
+      &functionTableId,
+      sizeof(GUID),
+      (void**) &rio,
+      sizeof(rio),
+      &dwBytes,
+      0,
+      0))
+    {
+      DWORD lastError = ::GetLastError();
+      std::cerr << "RIO fetch failed with " << lastError << std::endl;
+      abort();
+    }
+  }
+#endif
+
   std::vector<worker> workers;
   workers.reserve(threads);
   std::cout << "Creating " << workers.capacity() << " workers to read and write\n";
