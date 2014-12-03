@@ -1,3 +1,5 @@
+//#define USE_MEMORY_PRESSURE (8*1024*1024)
+
 #ifdef WIN32
 #  define WIN32_LEAN_AND_MEAN 1
 #  include <windows.h>
@@ -30,7 +32,7 @@ typedef std::pair<unsigned char *, native_handle_type> dma_buffer_type;
 
 static std::atomic<bool> first_packet(true);
 static std::atomic<size_t> gate;
-static size_t threads(2 /*std::thread::hardware_concurrency()*/), buffers(2), packet_size(1500);
+static size_t threads(1 /*std::thread::hardware_concurrency()*/), buffers(2), packet_size(4096);
 static udp::endpoint local(asio::ip::address_v4::any(), 7868), endpoint(asio::ip::address_v4::loopback(), 7868);
 static std::chrono::time_point<std::chrono::high_resolution_clock> begin;
 static asio::io_service service(threads);
@@ -153,7 +155,7 @@ struct worker
 #endif
       dowrite();
     };
-#ifdef __linux__
+#if defined(__linux__) && 1
     // Linux needs to be encouraged to do zero copy
     if(buffers>1)
     {
@@ -286,7 +288,17 @@ int main(int argc, char *argv[])
   std::cout << "Listening to " << local << " and sending to " << endpoint << " ...\n";
   //std::cout << "Launch the other side now and press Return when it's ready ...\n";
   //getchar();
-  
+
+#ifdef USE_MEMORY_PRESSURE
+  std::atomic<bool> mem_pressure_done(false);
+  std::thread mem_pressure([&mem_pressure_done]{
+    std::vector<char> a(USE_MEMORY_PRESSURE);
+    while(!mem_pressure_done)
+    {
+      std::fill(a.begin(), a.end(), 78);
+    }
+  });
+#endif
   std::vector<worker> workers;
   workers.reserve(threads);
   std::cout << "Creating " << workers.capacity() << " workers to read and write\n";
@@ -329,5 +341,9 @@ int main(int argc, char *argv[])
   printspeed.join();
   for(auto &i: workers)
     i.join();
+#ifdef USE_MEMORY_PRESSURE
+  mem_pressure_done=true;
+  mem_pressure.join();
+#endif
   return 0;
 }
