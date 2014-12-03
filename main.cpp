@@ -281,7 +281,7 @@ int main(int argc, char *argv[])
       return 1;
     }
   }
-  else
+  else if(argc<2)
     endpoint.port(endpoint.port()+1);
   std::cout << "Listening to " << local << " and sending to " << endpoint << " ...\n";
   //std::cout << "Launch the other side now and press Return when it's ready ...\n";
