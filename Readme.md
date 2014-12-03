@@ -46,3 +46,22 @@ Windows => Linux sees 115 Mb/sec with 1 thread and 1 buffer @ 4000 (0.5 MTUs)
 Linux => Windows sees at 117 Mb/sec with 1 thread and 4 buffer @ 4000 (0.5 MTUs)
 Windows machine @ 12% CPU
 Linux machine @ 17% CPU (note this is routed through OpenVZ networking)
+
+### CPU usage: ###
+
+Instead of performance, can zero copy reduce CPU utilisation? For 1500 byte UDP packets over a Gigabit ethernet link, I see these whole system load factors on Linux:
+
+Linux => Linux without splice(): 0.90
+Linux => Linux with splice(): 0.92
+
+With memory pressure so effects of L3 cache negated:
+
+Linux => Linux without splice(): 1.67
+Linux => Linux with splice(): 1.83
+
+Therefore for 1500 byte packets, *it makes zero sense to use splice() on Linux*. For 4k UDP packets:
+
+Linux => Linux without splice(): 0.57
+Linux => Linux with splice(): 0.54
+
+With 4k UDP packets it begins to make sense. I'd assume it's all gravy after this as packet sizes increase.
