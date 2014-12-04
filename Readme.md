@@ -49,7 +49,10 @@ Linux machine @ 17% CPU (note this is routed through OpenVZ networking)
 
 ### CPU usage: ###
 
-Instead of performance, can zero copy reduce CPU utilisation? For 1500 byte UDP packets over a Gigabit ethernet link, I see these whole system load factors on Linux:
+Instead of performance, can zero copy reduce CPU utilisation?
+
+#### Linux: ####
+For 1500 byte UDP packets over a Gigabit ethernet link, I see these whole system load factors on Linux:
 
 Linux => Linux without splice(): 0.90
 Linux => Linux with splice(): 0.92
@@ -65,3 +68,18 @@ Linux => Linux without splice(): 0.57
 Linux => Linux with splice(): 0.54
 
 With 4k UDP packets it begins to make sense. I'd assume it's all gravy after this as packet sizes increase.
+
+#### Windows: ####
+
+For 1500 byte UDP packets over a Gigabit ethernet link, I see these whole system CPU usage on Windows 8.1:
+
+Windows => Linux without dual buffer cycling (i.e. with copy): 17%
+Windows => Linux with dual buffer cycling (i.e. zero copy): 17%
+
+For 4k UDP packets:
+
+Windows => Linux without dual buffer cycling (i.e. with copy): 14%
+Windows => Linux with dual buffer cycling (i.e. zero copy): 14%
+
+I suspect this is because NetDMA is not supported on Windows 8 and therefore Intel QuickData is not available.
+

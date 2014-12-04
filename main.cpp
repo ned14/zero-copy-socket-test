@@ -33,7 +33,7 @@ typedef std::pair<unsigned char *, native_handle_type> dma_buffer_type;
 
 static std::atomic<bool> first_packet(true);
 static std::atomic<size_t> gate;
-static size_t threads(1 /*std::thread::hardware_concurrency()*/), buffers(2), packet_size(1500);
+static size_t threads(1 /*std::thread::hardware_concurrency()*/), buffers(2), packet_size(1460);
 static udp::endpoint local(asio::ip::address_v4::any(), 7868), endpoint(asio::ip::address_v4::loopback(), 7868);
 static std::chrono::time_point<std::chrono::high_resolution_clock> begin;
 static asio::io_service service(threads);
