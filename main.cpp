@@ -277,7 +277,7 @@ int main(int argc, char *argv[])
   listening_socket.set_option(asio::socket_base::receive_buffer_size(65487));
   listening_socket.set_option(asio::socket_base::send_buffer_size(65487));
   // Try to bind to this or next port
-  if(1 || listening_socket.bind(local, ec))
+  if(listening_socket.bind(local, ec))
   {
     std::cerr << "Failed to bind to " << local.port() << " due to " << ec << "\n";
     local.port(local.port()+1);
@@ -287,12 +287,11 @@ int main(int argc, char *argv[])
       return 1;
     }
   }
-  else if(argc<2)
-    endpoint.port(endpoint.port()+1);
+  //else if(argc<2)
+  //  endpoint.port(endpoint.port()+1);
   std::cout << "Listening to " << local << " and sending to " << endpoint << " ...\n";
   //std::cout << "Launch the other side now and press Return when it's ready ...\n";
   //getchar();
-<<<<<<< HEAD
 #ifdef ENABLE_WIN32_RIO
   {
     GUID functionTableId = WSAID_MULTIPLE_RIO;
@@ -315,8 +314,6 @@ int main(int argc, char *argv[])
   }
 #endif
 
-=======
-
 #ifdef USE_MEMORY_PRESSURE
   std::atomic<bool> mem_pressure_done(false);
   std::thread mem_pressure([&mem_pressure_done]{
@@ -327,7 +324,17 @@ int main(int argc, char *argv[])
     }
   });
 #endif
->>>>>>> f47e30b0896057447a97cfbb7c1e91d0ce9c6bf3
+  std::atomic<bool> watchdog_done(false);
+  std::condition_variable watchdog_cv;
+  std::thread watchdog([&watchdog_done, &watchdog_cv]{
+    std::mutex m;
+    std::unique_lock<decltype(m)> l(m);
+    if(!watchdog_cv.wait_for(l, std::chrono::minutes(5), [&watchdog_done]{return !!watchdog_done; }))
+    {
+      std::cerr << "Timed out" << std::endl;
+      abort();
+    }
+  });
   std::vector<worker> workers;
   workers.reserve(threads);
   std::cout << "Creating " << workers.capacity() << " workers to read and write\n";
@@ -353,7 +360,7 @@ int main(int argc, char *argv[])
         bytes+=i.read_bytes;
       }
       std::cout << "Making a total of " << reads << " reads and " << writes << " writes of " << bytes << " bytes\n";
-      double rate=bytes;
+      double rate=(double) bytes;
       rate/=std::chrono::duration_cast<std::chrono::nanoseconds>(end-begin).count()/1000000000.0;
       rate/=1024*1024;
       std::cout << "And some " << rate << "Mb/sec.\n";
@@ -370,6 +377,9 @@ int main(int argc, char *argv[])
   printspeed.join();
   for(auto &i: workers)
     i.join();
+  watchdog_done=true;
+  watchdog_cv.notify_all();
+  watchdog.join();
 #ifdef USE_MEMORY_PRESSURE
   mem_pressure_done=true;
   mem_pressure.join();
